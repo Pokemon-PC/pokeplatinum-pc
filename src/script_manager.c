@@ -380,7 +380,15 @@ void FieldSystem_ShowStartMenu(FieldSystem *fieldSystem)
 static void ScriptContext_JumpToOffsetID(ScriptContext *ctx, u16 offsetID)
 {
     ctx->scriptPtr += (offsetID * 4);
+#ifdef PLATFORM_PC
+    // PC port: read the signed 32-bit offset first, then add it: the order of the two
+// operands is unspecified in C (Metrowerks reads the offset first) and an
+// unsigned offset added to a 64-bit pointer cannot go backwards.
+    s32 offset = (s32)ScriptContext_ReadWord(ctx);
+    ctx->scriptPtr += offset;
+#else
     ctx->scriptPtr += ScriptContext_ReadWord(ctx);
+#endif
 }
 
 static void *ScriptContext_LoadScripts(int headerID)

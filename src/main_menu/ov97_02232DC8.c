@@ -101,19 +101,44 @@ void ov97_02232E38(UnkStruct_ov97_02232E38 *param0, void *param1)
     v1->unk_0C = 0;
 
     v1->unk_34 = param1;
+#ifdef PLATFORM_PC
+    // PC port: no cast as lvalue in Clang.
+    param1 = (u8 *)param1 + WM_SYSTEM_BUF_SIZE;
+#else
     (u8 *)param1 += WM_SYSTEM_BUF_SIZE;
+#endif
 
     v1->unk_38 = param1;
+#ifdef PLATFORM_PC
+    // PC port: no cast as lvalue in Clang.
+    param1 = (u8 *)param1 + (v1->unk_2C = ov97_02232E28());
+#else
     (u8 *)param1 += v1->unk_2C = ov97_02232E28();
+#endif
 
     v1->unk_3C = param1;
+#ifdef PLATFORM_PC
+    // PC port: no cast as lvalue in Clang.
+    param1 = (u8 *)param1 + (v1->unk_30 = ov97_02232E30());
+#else
     (u8 *)param1 += v1->unk_30 = ov97_02232E30();
+#endif
 
     v1->unk_28 = param1;
+#ifdef PLATFORM_PC
+    // PC port: no cast as lvalue in Clang.
+    param1 = (u8 *)param1 + (sizeof(WMBssDesc));
+#else
     (u8 *)param1 += sizeof(WMBssDesc);
+#endif
 
     v1->unk_24 = param1;
+#ifdef PLATFORM_PC
+    // PC port: no cast as lvalue in Clang.
+    param1 = (u8 *)param1 + (sizeof(WMScanParam));
+#else
     (u8 *)param1 += sizeof(WMScanParam);
+#endif
 
     (void)WM_Init(v1->unk_34, 2);
 
@@ -149,10 +174,20 @@ void ov97_02232E38(UnkStruct_ov97_02232E38 *param0, void *param1)
     ov97_02233548();
 
     ov97_02233538()->unk_08 = param1;
+#ifdef PLATFORM_PC
+    // PC port: no cast as lvalue in Clang.
+    param1 = (u8 *)param1 + (v1->unk_2C);
+#else
     (u8 *)param1 += v1->unk_2C;
+#endif
 
     ov97_02233538()->unk_0C = param1;
+#ifdef PLATFORM_PC
+    // PC port: no cast as lvalue in Clang.
+    param1 = (u8 *)param1 + (v1->unk_30);
+#else
     (u8 *)param1 += v1->unk_30;
+#endif
 
     (void)WM_GetNextTgid();
 }

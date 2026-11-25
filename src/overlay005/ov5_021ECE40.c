@@ -335,7 +335,12 @@ static void ov5_021ED0A4(UnkStruct_ov5_021ED0A4 *param0, int param1)
         v3->unk_00 = 0xffff;
         v3->unk_04 = v2;
         v3++;
+#ifdef PLATFORM_PC
+        // PC port: no cast as lvalue in Clang.
+        v2 = (void *)((u8 *)v2 + v1);
+#else
         (u8 *)v2 += v1;
+#endif
         param1--;
     } while (param1);
 }

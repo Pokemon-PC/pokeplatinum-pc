@@ -10,6 +10,12 @@
 #include "easy_chat_words.h"
 
 #include "res/words/word_bank.naix"
+#ifdef PLATFORM_PC
+// PC port: declare the pointer-returning functions this file calls (an implicit
+// declaration returns int and would truncate the pointer on a 64-bit host).
+#include "graphics.h"
+#include "heap.h"
+#endif
 
 PasswordWordBank *PasswordWordBank_New(enum HeapID heapID)
 {

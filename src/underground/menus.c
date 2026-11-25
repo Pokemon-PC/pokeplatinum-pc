@@ -155,6 +155,22 @@ static const WindowTemplate sYesNoWindowTemplate = {
 };
 
 // clang-format off
+#ifdef PLATFORM_PC
+// PC port: function addresses kept in an integer: uintptr_t (a static initializer
+// cannot truncate an address to 32 bits).
+static const struct {
+    u32 bankEntry;
+    uintptr_t callback;
+} sUndergroundMenuOptions[] = {
+    [UNDERGROUND_START_MENU_OPTION_TRAPS]     = { .bankEntry = UndergroundCommon_Text_Traps,          .callback = (uintptr_t)UndergroundMenu_OpenTrapsMenu      },
+    [UNDERGROUND_START_MENU_OPTION_SPHERES]   = { .bankEntry = UndergroundCommon_Text_Spheres,        .callback = (uintptr_t)UndergroundMenu_OpenSpheresMenu    },
+    [UNDERGROUND_START_MENU_OPTION_GOODS]     = { .bankEntry = UndergroundCommon_Text_Goods,          .callback = (uintptr_t)UndergroundMenu_OpenGoodsMenu      },
+    [UNDERGROUND_START_MENU_OPTION_TREASURES] = { .bankEntry = UndergroundCommon_Text_Treasures,      .callback = (uintptr_t)UndergroundMenu_OpenTreasuresMenu  },
+    [UNDERGROUND_START_MENU_OPTION_TRAINER]   = { .bankEntry = UndergroundCommon_Text_PlayerTemplate, .callback = (uintptr_t)UndergroundMenu_OpenTrainerRecords },
+    [UNDERGROUND_START_MENU_OPTION_GO_UP]     = { .bankEntry = UndergroundCommon_Text_GoUp,           .callback = (uintptr_t)UndergroundMenu_GoUpCallback       },
+    [UNDERGROUND_START_MENU_OPTION_CLOSE]     = { .bankEntry = UndergroundCommon_Text_Close,          .callback = (uintptr_t)UndergroundMenu_CloseCallback      }
+};
+#else
 static const struct {
     u32 bankEntry;
     u32 callback;
@@ -167,6 +183,7 @@ static const struct {
     [UNDERGROUND_START_MENU_OPTION_GO_UP]     = { .bankEntry = UndergroundCommon_Text_GoUp,           .callback = (u32)UndergroundMenu_GoUpCallback       },
     [UNDERGROUND_START_MENU_OPTION_CLOSE]     = { .bankEntry = UndergroundCommon_Text_Close,          .callback = (u32)UndergroundMenu_CloseCallback      }
 };
+#endif
 // clang-format on
 
 static const ListMenuTemplate sListMenuTemplate = {

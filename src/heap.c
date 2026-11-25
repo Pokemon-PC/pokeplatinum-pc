@@ -28,6 +28,15 @@ static HeapInfo sHeapInfo;
 
 static BOOL CreateHeapInternal(enum HeapID parent, enum HeapID child, u32 size, s32 alignment);
 
+#ifdef PLATFORM_PC
+// PC port: heap sizes were tuned for the DS, where pointers are 4 bytes. On
+// the 64-bit PC build every structure holding pointers is larger, so all
+// heaps get four times the room (the PC main arena is larger, hw_pc.h).
+#define PC_HEAP_SIZE(sz) ((sz) * 4)
+#else
+#define PC_HEAP_SIZE(sz) (sz)
+#endif
+
 void Heap_InitSystem(const HeapParam *templates, u32 nTemplates, u32 totalNumHeaps, u32 preSize)
 {
     void *ptr;
@@ -66,15 +75,30 @@ void Heap_InitSystem(const HeapParam *templates, u32 nTemplates, u32 totalNumHea
         switch (templates[i].arena) {
         case OS_ARENA_MAIN:
         default:
+#ifdef PLATFORM_PC
+            // PC port: larger heaps.
+            ptr = OS_AllocFromMainArenaLo(PC_HEAP_SIZE(templates[i].size), 4);
+#else
             ptr = OS_AllocFromMainArenaLo(templates[i].size, 4);
+#endif
             break;
         case OS_ARENA_MAINEX:
+#ifdef PLATFORM_PC
+            // PC port: larger heaps.
+            ptr = OS_AllocFromMainExArenaHi(PC_HEAP_SIZE(templates[i].size), 4);
+#else
             ptr = OS_AllocFromMainExArenaHi(templates[i].size, 4);
+#endif
             break;
         }
 
         if (ptr != NULL) {
+#ifdef PLATFORM_PC
+            // PC port: larger heaps.
+            sHeapInfo.heapHandles[i] = NNS_FndCreateExpHeap(ptr, PC_HEAP_SIZE(templates[i].size));
+#else
             sHeapInfo.heapHandles[i] = NNS_FndCreateExpHeap(ptr, templates[i].size);
+#endif
             sHeapInfo.heapIdxs[i] = (u8)i;
         } else {
             GF_ASSERT(FALSE);
@@ -120,9 +144,17 @@ BOOL Heap_CreateAtEnd(enum HeapID parent, enum HeapID child, u32 size)
 
 static BOOL CreateHeapInternal(enum HeapID parent, enum HeapID child, u32 size, s32 alignment)
 {
+#ifdef PLATFORM_PC
+    // PC port: larger heaps (child heaps too).
+    GF_ASSERT(OS_GetProcMode() != OS_PROCMODE_IRQ);
+    size = PC_HEAP_SIZE(size);
+
+    u8 *ptr = sHeapInfo.heapIdxs;
+#else
     GF_ASSERT(OS_GetProcMode() != OS_PROCMODE_IRQ);
 
     u8 *ptr = sHeapInfo.heapIdxs;
+#endif
     if (sHeapInfo.unallocatedHeapID == ptr[child]) {
         NNSFndHeapHandle parentHeap = sHeapInfo.heapHandles[ptr[parent]];
         if (parentHeap != NNS_FND_HEAP_INVALID_HANDLE) {
@@ -200,9 +232,131 @@ static void *AllocFromHeapInternal(NNSFndHeapHandle heap, u32 size, s32 alignmen
     return ptr;
 }
 
+#ifdef PLATFORM_PC
+// PC port: debug checker (PPL_HEAPCHECK=1, src/platform_pc/nitro/nitro_pc.c):
+// walks every heap's block lists; on damage, names the used block that ends
+// where the damaged header starts (the likely overflow) and the code that
+// allocated it. Returns FALSE when a heap is damaged.
+#include <stdio.h>
+#include <stdlib.h>
+void pc_log(const char *fmt, ...);
+void pc_log_backtrace(const char *why);
+extern int gPcHeapCheck;
+#define PC_MBLOCK_USED_SIG 0x5544
+#define PC_MBLOCK_FREE_SIG 0x4652
+typedef struct {
+    NNSiFndHeapHead head;
+    NNSiFndExpHeapHead exp;
+} PcExpHeap;
+
+static BOOL PcCheckBlockList(int idx, PcExpHeap *heap, NNSiFndExpMBlockList *list, u16 sig)
+{
+    u8 *lo = heap->head.heapStart, *hi = heap->head.heapEnd;
+    NNSiFndExpHeapMBlockHead *prev = NULL;
+    for (NNSiFndExpHeapMBlockHead *b = list->head; b != NULL; prev = b, b = b->pMBHeadNext) {
+        BOOL ok = (u8 *)b >= lo && (u8 *)b < hi && b->signature == sig && b->pMBHeadPrev == prev
+            && (u8 *)(b + 1) + b->blockSize <= hi;
+        if (ok) {
+            continue;
+        }
+        u8 *bad = prev == NULL ? (u8 *)list->head : (u8 *)prev->pMBHeadNext;
+        pc_log("heapcheck: heap #%d (%p-%p) damaged %s block at %p (after %p)", idx, lo, hi,
+            sig == PC_MBLOCK_USED_SIG ? "used" : "free", bad, prev);
+        for (NNSiFndExpHeapMBlockHead *u = heap->exp.mbUsedList.head; u != NULL && (u8 *)u >= lo && (u8 *)u < hi; u = u->pMBHeadNext) {
+            u8 *end = (u8 *)(u + 1) + u->blockSize;
+            if (end <= bad && end + 64 > bad) {
+                void *ra;
+                memcpy(&ra, u + 1, sizeof ra);
+                pc_log("heapcheck:   used block %p..%p (%u bytes) allocated from %p", (void *)(u + 1), end,
+                    (unsigned)u->blockSize, ra);
+            }
+        }
+        return FALSE;
+    }
+    return TRUE;
+}
+
+// On an allocation failure: the largest used blocks of the heap, with the
+// allocation site recorded by Heap_Alloc (other allocators leave garbage).
+static void PcDumpLargestBlocks(enum HeapID heapID)
+{
+    PcExpHeap *heap = (PcExpHeap *)sHeapInfo.heapHandles[sHeapInfo.heapIdxs[heapID]];
+    if (heap == NULL) {
+        return;
+    }
+    for (int pass = 0; pass < 5; pass++) {
+        NNSiFndExpHeapMBlockHead *best = NULL;
+        static NNSiFndExpHeapMBlockHead *shown[5];
+        for (NNSiFndExpHeapMBlockHead *u = heap->exp.mbUsedList.head; u != NULL; u = u->pMBHeadNext) {
+            BOOL already = FALSE;
+            for (int k = 0; k < pass; k++) {
+                already |= shown[k] == u;
+            }
+            if (!already && (best == NULL || u->blockSize > best->blockSize)) {
+                best = u;
+            }
+        }
+        if (best == NULL) {
+            break;
+        }
+        shown[pass] = best;
+        void *ra;
+        memcpy(&ra, best + 1, sizeof ra);
+        pc_log("heap %d: used block of %u bytes at %p (site %p)", (int)heapID, (unsigned)best->blockSize, (void *)(best + 1), ra);
+    }
+}
+
+BOOL pc_heap_check(void)
+{
+    for (int i = 0; i < sHeapInfo.maxHeaps; i++) {
+        PcExpHeap *heap = (PcExpHeap *)sHeapInfo.heapHandles[i];
+        if (heap == NULL || heap->head.signature != 0x45585048) { // 'EXPH'
+            continue;
+        }
+        if (!PcCheckBlockList(i, heap, &heap->exp.mbUsedList, PC_MBLOCK_USED_SIG)
+            || !PcCheckBlockList(i, heap, &heap->exp.mbFreeList, PC_MBLOCK_FREE_SIG)) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+// Who allocated a block (pc_heap_check): kept in MemoryBlock's filler.
+// PPL_HEAPLOG=N logs every allocation from heap N (size, caller, free space).
+static void *PcNoteAllocSite(void *ptr, void *ra)
+{
+    static int logHeap = -2;
+    if (logHeap == -2) {
+        const char *e = getenv("PPL_HEAPLOG");
+        logHeap = e != NULL ? atoi(e) : -1;
+    }
+    if (ptr != NULL && logHeap >= 0 && ((MemoryBlock *)((u8 *)ptr - sizeof(MemoryBlock)))->heapID == (u32)logHeap) {
+        NNSiFndExpHeapMBlockHead *mb = (NNSiFndExpHeapMBlockHead *)((u8 *)ptr - sizeof(MemoryBlock)) - 1;
+        pc_log("heaplog: heap %d +%u bytes at %p from %p, %u free", logHeap, (unsigned)mb->blockSize, ptr, ra,
+            (unsigned)HeapExp_FndGetTotalFreeSize(logHeap));
+    }
+    if (ptr != NULL) {
+        memcpy((u8 *)ptr - sizeof(MemoryBlock), &ra, sizeof ra);
+        if (gPcHeapCheck == 1 && !pc_heap_check()) {
+            pc_log_backtrace("heapcheck (alloc)");
+            gPcHeapCheck = 2;
+        }
+    }
+    return ptr;
+}
+#endif
+
+#ifdef PLATFORM_PC
+// PC port: say where an allocation failed.
+static void AllocFail(void)
+{
+    pc_log_backtrace("alloc-fail");
+    if (CommManager_IsInitialized()) {
+#else
 static void AllocFail(void)
 {
     if (CommManager_IsInitialized()) {
+#endif
         ErrorMessageReset_PrintErrorAndReset();
     }
 }
@@ -213,8 +367,18 @@ void *Heap_Alloc(u32 heapID, u32 size)
 
     if ((u32)heapID < sHeapInfo.totalNumHeaps) {
         u8 index = sHeapInfo.heapIdxs[heapID];
+#ifdef PLATFORM_PC
+        // PC port: note the allocation site (heap checker).
+        ptr = PcNoteAllocSite(AllocFromHeapInternal(sHeapInfo.heapHandles[index], size, 4, heapID), __builtin_return_address(0));
+        if (ptr == NULL) {
+            pc_warn("Heap_Alloc(heap %d, %u bytes) failed: %u bytes free", (int)heapID, (unsigned)size, (unsigned)HeapExp_FndGetTotalFreeSize(heapID));
+            PcDumpLargestBlocks(heapID);
+        }
+    }
+#else
         ptr = AllocFromHeapInternal(sHeapInfo.heapHandles[index], size, 4, heapID);
     }
+#endif
 
     if (ptr != NULL) {
         sHeapInfo.numMemBlocks[heapID]++;
@@ -231,8 +395,18 @@ void *Heap_AllocAtEnd(u32 heapID, u32 size)
 
     if ((u32)heapID < sHeapInfo.totalNumHeaps) {
         u8 index = sHeapInfo.heapIdxs[heapID];
+#ifdef PLATFORM_PC
+        // PC port: note the allocation site (heap checker).
+        ptr = PcNoteAllocSite(AllocFromHeapInternal(sHeapInfo.heapHandles[index], size, -4, heapID), __builtin_return_address(0));
+        if (ptr == NULL) {
+            pc_warn("Heap_Alloc(heap %d, %u bytes) failed: %u bytes free", (int)heapID, (unsigned)size, (unsigned)HeapExp_FndGetTotalFreeSize(heapID));
+            PcDumpLargestBlocks(heapID);
+        }
+    }
+#else
         ptr = AllocFromHeapInternal(sHeapInfo.heapHandles[index], size, -4, heapID);
     }
+#endif
 
     if (ptr != NULL) {
         sHeapInfo.numMemBlocks[heapID]++;

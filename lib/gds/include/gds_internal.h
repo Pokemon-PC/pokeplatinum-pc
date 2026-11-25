@@ -71,7 +71,13 @@ typedef struct {
     void *unk_136;
 } UnkStruct_ov61_0222D1FC;
 
+#ifdef PLATFORM_PC
+// PC port: a variable defined in a header is one "common" symbol for Metrowerks;
+// Clang (-fno-common) needs one definition: lib/gds/src/ov61_0222CEDC.c.
+extern UnkStruct_ov61_0222E764 Unk_ov61_0222E764;
+#else
 UnkStruct_ov61_0222E764 Unk_ov61_0222E764;
+#endif
 
 void ov61_0222CEDC(void);
 BOOL ov61_0222CF40(char *url, int port, UnkStruct_ov62_022349A8_sub1 *param2);

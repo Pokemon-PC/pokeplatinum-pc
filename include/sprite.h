@@ -65,7 +65,14 @@ typedef struct Sprite {
 
     // This field is supposed to be a union between CellAnimationData, VRamCellAnimationData, and MultiCellAnimationData
     // but it's actually too small to hold the largest of these types. This should really be u32 animData[31].
+#ifdef PLATFORM_PC
+    // PC port: the NNS animation structs hold pointers and are larger in 64-bit;
+    // SPRITE_ANIM_SIZE words overflow into imageProxy (OBJ tiles drawn from
+    // VRAM offset 0). Sized here from the largest of the three, 8-byte aligned.
+    u64 animData[(sizeof(union { CellAnimationData c; VRamCellAnimationData v; MultiCellAnimationData m; }) + 7) / 8];
+#else
     u32 animData[SPRITE_ANIM_SIZE];
+#endif
     NNSG2dImageProxy imageProxy;
     NNSG2dImagePaletteProxy paletteProxy;
     u32 type;

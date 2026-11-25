@@ -319,6 +319,24 @@ static const u8 sPocketSizes[POCKET_MAX] = {
     [POCKET_KEY_ITEMS] = KEY_ITEM_POCKET_SIZE
 };
 
+#ifdef PLATFORM_PC
+// PC port: function addresses kept in an integer: uintptr_t (a static initializer
+// cannot truncate an address to 32 bits).
+static const uintptr_t sItemActionFuncs[] = {
+    [ITEM_ACTION_USE] = (uintptr_t)ItemActionFunc_Use,
+    [ITEM_ACTION_WALK] = (uintptr_t)ItemActionFunc_Use,
+    [ITEM_ACTION_CHECK] = (uintptr_t)ItemActionFunc_Use,
+    [ITEM_ACTION_PLANT] = (uintptr_t)ItemActionFunc_Use,
+    [ITEM_ACTION_OPEN] = (uintptr_t)ItemActionFunc_Use,
+    [ITEM_ACTION_TRASH] = (uintptr_t)ItemActionFunc_Trash,
+    [ITEM_ACTION_REGISTER] = (uintptr_t)ItemActionFunc_Register,
+    [ITEM_ACTION_DESELECT] = (uintptr_t)ItemActionFunc_Deselect,
+    [ITEM_ACTION_GIVE] = (uintptr_t)ItemActionFunc_Give,
+    [ITEM_ACTION_CHECK_TAG] = (uintptr_t)ItemActionFunc_CheckTag,
+    [ITEM_ACTION_CONFIRM] = (uintptr_t)ItemActionFunc_Confirm,
+    [ITEM_ACTION_CANCEL] = MENU_CANCEL
+};
+#else
 static const u32 sItemActionFuncs[] = {
     [ITEM_ACTION_USE] = (u32)ItemActionFunc_Use,
     [ITEM_ACTION_WALK] = (u32)ItemActionFunc_Use,
@@ -333,6 +351,7 @@ static const u32 sItemActionFuncs[] = {
     [ITEM_ACTION_CONFIRM] = (u32)ItemActionFunc_Confirm,
     [ITEM_ACTION_CANCEL] = MENU_CANCEL
 };
+#endif
 
 // clang-format off
 static const u16 sItemSpriteBoxTiles[] = {

@@ -54,6 +54,14 @@ static void HandleFieldInput(FieldSystem *fieldSystem);
 
 static FieldSystem *sFieldSystem;
 
+#ifdef PLATFORM_PC
+// PC port: the field system, for the test hooks (src/platform_pc/game_test_hooks_pc.c).
+FieldSystem *pc_test_field_system(void)
+{
+    return sFieldSystem;
+}
+#endif
+
 static BOOL InitFieldSystemContinue(ApplicationManager *appMan, int *state)
 {
     ApplicationArgs *argv = ApplicationManager_Args(appMan);

@@ -2,6 +2,10 @@
 
 #include "gds.h"
 #include "gds_internal.h"
+#ifdef PLATFORM_PC
+// PC port: the definition of the variable declared in gds_internal.h.
+UnkStruct_ov61_0222E764 Unk_ov61_0222E764;
+#endif
 
 static void ov61_0222CFD4(void);
 

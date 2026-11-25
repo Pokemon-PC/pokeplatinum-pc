@@ -1003,7 +1003,15 @@ static BOOL ScrCmd_ReturnCommonScript(ScriptContext *ctx)
 
 static BOOL ScrCmd_GoTo(ScriptContext *ctx)
 {
+#ifdef PLATFORM_PC
+    // PC port: read the signed 32-bit offset first, then add it: the order of the two
+// operands is unspecified in C (Metrowerks reads the offset first) and an
+// unsigned offset added to a 64-bit pointer cannot go backwards.
+    s32 offset = (s32)ScriptContext_ReadWord(ctx);
+    ScriptContext_Jump(ctx, ctx->scriptPtr + offset);
+#else
     ScriptContext_Jump(ctx, ctx->scriptPtr + ScriptContext_ReadWord(ctx));
+#endif
     return FALSE;
 }
 
@@ -1052,7 +1060,15 @@ static BOOL ScrCmd_Unused_019(ScriptContext *ctx)
 
 static BOOL ScrCmd_Call(ScriptContext *ctx)
 {
+#ifdef PLATFORM_PC
+    // PC port: read the signed 32-bit offset first, then add it: the order of the two
+// operands is unspecified in C (Metrowerks reads the offset first) and an
+// unsigned offset added to a 64-bit pointer cannot go backwards.
+    s32 offset = (s32)ScriptContext_ReadWord(ctx);
+    ScriptContext_Call(ctx, ctx->scriptPtr + offset);
+#else
     ScriptContext_Call(ctx, ctx->scriptPtr + ScriptContext_ReadWord(ctx));
+#endif
     return FALSE;
 }
 

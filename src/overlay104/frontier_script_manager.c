@@ -185,7 +185,15 @@ void ov104_0222E8E8(FrontierScriptManager *param0, UnkStruct_ov104_0222E8C8 *par
 static void FrontierScriptContext_JumpToOffsetID(FrontierScriptContext *ctx, int offsetID)
 {
     ctx->scriptPtr += offsetID * 4;
+#ifdef PLATFORM_PC
+    // PC port: read the signed 32-bit offset first, then add it: the order of the two
+// operands is unspecified in C (Metrowerks reads the offset first) and an
+// unsigned offset added to a 64-bit pointer cannot go backwards.
+    s32 offset = (s32)FrontierScriptContext_ReadWord(ctx);
+    ctx->scriptPtr += offset;
+#else
     ctx->scriptPtr += FrontierScriptContext_ReadWord(ctx);
+#endif
 }
 
 u16 *ov104_0222E91C(FrontierScriptManager *param0, int param1)

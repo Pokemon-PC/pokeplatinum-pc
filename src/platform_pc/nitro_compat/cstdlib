@@ -1,0 +1,4 @@
+/* <cstdlib> in a C source (src/overlay017/ov17_0224A0FC.c): Metrowerks
+ * accepts it; the C library header is the same thing. */
+#pragma once
+#include <stdlib.h>

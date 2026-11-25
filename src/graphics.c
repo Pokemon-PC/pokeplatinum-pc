@@ -104,6 +104,27 @@ void *LoadCompressedMemberFromNARC(enum NarcID narcID, u32 narcMemberIdx, u32 he
 
 void *LoadMemberFromNARC(enum NarcID narcID, u32 narcMemberIdx, BOOL compressed, enum HeapID heapID, BOOL allocAtEnd)
 {
+#ifdef PLATFORM_PC
+    // PC port: a member missing from a localized ROM archive gives NULL; a member
+// compressed differently in the player's ROM is detected (pc_lz_autodetect).
+    void *data;
+    u32 memberSize = NARC_GetMemberSizeByIndexPair(narcID, narcMemberIdx);
+
+    if (memberSize == 0) {
+        return NULL;   // not in this ROM's archive (localized ROM)
+    }
+
+    if (compressed || allocAtEnd == TRUE) {
+        data = Heap_AllocAtEnd(heapID, memberSize);
+    } else {
+        data = Heap_Alloc(heapID, memberSize);
+    }
+
+    if (data != NULL) {
+        NARC_ReadWholeMemberByIndexPair(data, narcID, narcMemberIdx);
+        compressed = pc_lz_autodetect(data, compressed);
+
+#else
     void *data;
 
     if (compressed || allocAtEnd == TRUE) {
@@ -115,6 +136,7 @@ void *LoadMemberFromNARC(enum NarcID narcID, u32 narcMemberIdx, BOOL compressed,
     if (data != NULL) {
         NARC_ReadWholeMemberByIndexPair(data, narcID, narcMemberIdx);
 
+#endif
         if (compressed) {
             void *uncompBuf;
 
@@ -246,17 +268,36 @@ void *LoadMemberFromOpenNARC(NARC *narc, u32 narcMemberIdx, BOOL compressed, enu
 void *LoadMemberFromOpenNARC_OutFileSize(NARC *narc, u32 narcMemberIdx, BOOL compressed, enum HeapID heapID, BOOL allocAtEnd, u32 *fileSize)
 {
     void *data;
+#ifdef PLATFORM_PC
+    // PC port: a member missing from a localized ROM archive gives NULL.
+    *fileSize = NARC_GetMemberSize(narc, narcMemberIdx);
+
+    if (*fileSize == 0) {
+        return NULL;   // not in this ROM's archive (localized ROM)
+    }
+
+    if (compressed || allocAtEnd == TRUE) {
+#else
     *fileSize = NARC_GetMemberSize(narc, narcMemberIdx);
 
     if (compressed || allocAtEnd == TRUE) {
+#endif
         data = Heap_AllocAtEnd(heapID, *fileSize);
     } else {
         data = Heap_Alloc(heapID, *fileSize);
     }
 
+#ifdef PLATFORM_PC
+    // PC port: a member compressed differently in the player's ROM is detected.
+    if (data != NULL) {
+        NARC_ReadWholeMember(narc, narcMemberIdx, data);
+        compressed = pc_lz_autodetect(data, compressed);
+
+#else
     if (data != NULL) {
         NARC_ReadWholeMember(narc, narcMemberIdx, data);
 
+#endif
         if (compressed) {
             *fileSize = MI_GetUncompressedSize(data);
 

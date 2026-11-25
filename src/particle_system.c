@@ -115,10 +115,23 @@ ParticleSystem *ParticleSystem_New(SPLTexVRAMAllocFunc texAllocFunc, SPLPalVRAMA
     particleSystem->cameraUp = sParticleSystemDefaultCameraUp;
     particleSystem->cameraTarget = sParticleSystemDefaultCameraTarget;
 
+#ifdef PLATFORM_PC
+    // PC port: the caller sizes the particle work buffer for the DS; lib/spl emitters
+// and particles hold pointers and are larger in 64-bit. The work memory is
+// a buffer four times as large owned by the particle system (the caller's
+// buffer stays heapStart, which callers free through ParticleSystem_GetHeapStart).
+    memset(heap, 0, heapSize);
+    particleSystem->heapStart = heap;
+    particleSystem->pcWork = Heap_Alloc(heapID, heapSize * 4);
+    memset(particleSystem->pcWork, 0, heapSize * 4);
+    particleSystem->heap = particleSystem->pcWork;
+    particleSystem->heapEnd = (u8 *)particleSystem->pcWork + heapSize * 4;
+#else
     memset(heap, 0, heapSize);
     particleSystem->heapStart = heap;
     particleSystem->heap = heap;
     particleSystem->heapEnd = (void *)((u32)heap + heapSize);
+#endif
     particleSystem->id = id;
     sParticleSystems[id] = particleSystem;
 
@@ -194,10 +207,23 @@ void ParticleSystem_Free(ParticleSystem *particleSystem)
         }
     }
 
+#ifdef PLATFORM_PC
+    // PC port: free the PC work buffer (see ParticleSystem_New).
     if (particleSystem->camera != NULL) {
         Camera_Delete(particleSystem->camera);
     }
 
+    if (particleSystem->pcWork != NULL) {
+        Heap_Free(particleSystem->pcWork);
+        particleSystem->pcWork = NULL;
+    }
+
+#else
+    if (particleSystem->camera != NULL) {
+        Camera_Delete(particleSystem->camera);
+    }
+
+#endif
     Heap_Free(particleSystem);
 }
 

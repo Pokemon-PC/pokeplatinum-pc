@@ -900,7 +900,12 @@ static BOOL FrontierScrCmd_ApplyMovement(FrontierScriptContext *ctx)
     FrontierScriptManager *scriptMan = ctx->scriptMan;
     FrontierGraphics *graphics = BattleFrontier_GetGraphics(scriptMan->frontier);
     u16 localID = FrontierScriptContext_GetVar(ctx);
+#ifdef PLATFORM_PC
+    // PC port: a signed offset (an unsigned one added to a 64-bit pointer cannot go backwards).
+    s32 offset = (s32)FrontierScriptContext_ReadWord(ctx);
+#else
     u32 offset = FrontierScriptContext_ReadWord(ctx);
+#endif
     UnkStruct_ov104_0223C634 *object = ov104_0223D5A8(scriptMan->frontier, localID);
 
     if (object == NULL) {

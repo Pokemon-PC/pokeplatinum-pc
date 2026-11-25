@@ -212,6 +212,19 @@ static void UndergroundTalk_UpdateCursorPos(TalkMenu *menu);
 static TalkMenu *sCurrentTalkMenu = NULL;
 static ResponseMenu *sCurrentResponseMenu = NULL;
 
+#ifdef PLATFORM_PC
+// PC port: function addresses kept in an integer: uintptr_t (a static initializer
+// cannot truncate an address to 32 bits).
+static const struct {
+    u32 bankEntry;
+    uintptr_t callback;
+} sTalkOptions[] = {
+    { UndergroundCommon_Text_Greet, (uintptr_t)UndergroundTalk_OfferExchangeTrainerCases },
+    { UndergroundCommon_Text_Question, (uintptr_t)UndergroundTalk_StartAskingQuestions },
+    { UndergroundCommon_Text_GiveGoods, (uintptr_t)UndergroundTalk_OpenGiveGiftMenu },
+    { UndergroundCommon_Text_Exit, (uintptr_t)UndergroundTalk_CancelTalk }
+};
+#else
 static const struct {
     u32 bankEntry;
     u32 callback;
@@ -221,6 +234,7 @@ static const struct {
     { UndergroundCommon_Text_GiveGoods, (u32)UndergroundTalk_OpenGiveGiftMenu },
     { UndergroundCommon_Text_Exit, (u32)UndergroundTalk_CancelTalk }
 };
+#endif
 
 static const ListMenuTemplate sListMenuTemplate = {
     .choices = NULL,

@@ -25,6 +25,11 @@
 #include "trainer_info.h"
 #include "unk_020298BC.h"
 #include "vars_flags.h"
+#ifdef PLATFORM_PC
+// PC port: declare the pointer-returning functions this file calls (an implicit
+// declaration returns int and would truncate the pointer on a 64-bit host).
+#include "chatot_cry.h"
+#endif
 
 static BOOL ResumeWhenContestSynced(ScriptContext *ctx);
 static BOOL IsContestCommTaskDone(ScriptContext *ctx);

@@ -57,6 +57,11 @@
 #include "vars_flags.h"
 
 #include "res/text/bank/location_names.h"
+#ifdef PLATFORM_PC
+// PC port: declare the pointer-returning functions this file calls (an implicit
+// declaration returns int and would truncate the pointer on a 64-bit host).
+#include "wifi_history_save_data.h"
+#endif
 
 static int CalcTerrain(const FieldSystem *fieldSystem, enum BattleBackground background);
 static void SetBackgroundAndTerrain(FieldBattleDTO *dto, const FieldSystem *fieldSystem);

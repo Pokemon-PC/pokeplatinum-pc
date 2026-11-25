@@ -10,7 +10,12 @@ ApplicationManager *ApplicationManager_New(const ApplicationManagerTemplate *tem
 {
     ApplicationManager *appMan = Heap_Alloc(heapID, sizeof(ApplicationManager));
 
+#ifdef PLATFORM_PC
+    // PC port: the template has a const member: Clang refuses the structure assignment.
+    memcpy((void *)&appMan->template, template, sizeof(*template));
+#else
     appMan->template = *template;
+#endif
     appMan->execState = 0;
     appMan->procState = 0;
     appMan->args = args;

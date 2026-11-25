@@ -228,6 +228,38 @@ static void ReadFromNarcMemberByPathAndIndex(void *dest, const char *path, int m
     FS_ReadFile(&file, &btafStart, 4);
     FS_ReadFile(&file, &fileCount, 2);
 
+#ifdef PLATFORM_PC
+    // PC port: a localized ROM can have fewer members in an archive than the US one
+// the code was decompiled from (French op_demo.narc: 113 vs 116). Skip
+// the read like the localized game does instead of reading past the table.
+    if (fileCount <= memberIndex) {
+        pc_warn("narc: %s has %u members, member %d does not exist in this ROM", path, fileCount, memberIndex);
+        FS_CloseFile(&file);
+        return;
+    }
+
+    gmifStart = btnfStart + btafStart;
+
+    FS_SeekFile(&file, gmifStart + 4, FS_SEEK_SET);
+    FS_ReadFile(&file, &btafStart, 4);
+
+    chunkSize = gmifStart + btafStart;
+
+    FS_SeekFile(&file, btnfStart + 12 + memberIndex * 8, FS_SEEK_SET);
+    FS_ReadFile(&file, &fileStart, 4);
+    FS_ReadFile(&file, &fileEnd, 4);
+    FS_SeekFile(&file, chunkSize + 8 + fileStart + offset, FS_SEEK_SET);
+
+    if (bytesToRead) {
+        btafStart = bytesToRead;
+    } else {
+        btafStart = fileEnd - fileStart;
+    }
+
+    GF_ASSERT(btafStart != 0);
+
+    FS_ReadFile(&file, dest, btafStart);
+#else
     GF_ASSERT(fileCount > memberIndex);
 
     gmifStart = btnfStart + btafStart;
@@ -251,6 +283,7 @@ static void ReadFromNarcMemberByPathAndIndex(void *dest, const char *path, int m
     GF_ASSERT(btafStart != 0);
 
     FS_ReadFile(&file, dest, btafStart);
+#endif
     FS_CloseFile(&file);
 }
 
@@ -277,6 +310,38 @@ static void *AllocAndReadFromNarcMemberByPathAndIndex(const char *path, int memb
     FS_ReadFile(&file, &btafStart, 4);
     FS_ReadFile(&file, &fileCount, 2);
 
+#ifdef PLATFORM_PC
+    // PC port: a localized ROM can have fewer members in an archive than the US one
+// the code was decompiled from (French op_demo.narc: 113 vs 116). Skip
+// the read like the localized game does instead of reading past the table.
+    if (fileCount <= memberIndex) {
+        pc_warn("narc: %s has %u members, member %d does not exist in this ROM", path, fileCount, memberIndex);
+        FS_CloseFile(&file);
+        return NULL;
+    }
+
+    gmifStart = btnfStart + btafStart;
+
+    FS_SeekFile(&file, gmifStart + 4, FS_SEEK_SET);
+    FS_ReadFile(&file, &btafStart, 4);
+
+    chunkSize = gmifStart + btafStart;
+
+    FS_SeekFile(&file, btnfStart + 12 + memberIndex * 8, FS_SEEK_SET);
+    FS_ReadFile(&file, &fileStart, 4);
+    FS_ReadFile(&file, &fileEnd, 4);
+    FS_SeekFile(&file, chunkSize + 8 + fileStart + offset, FS_SEEK_SET);
+
+    if (bytesToRead) {
+        btafStart = bytesToRead;
+    } else {
+        btafStart = fileEnd - fileStart;
+    }
+
+    GF_ASSERT(btafStart != 0);
+
+    if (allocAtEnd == 0) {
+#else
     GF_ASSERT(fileCount > memberIndex);
 
     gmifStart = btnfStart + btafStart;
@@ -300,6 +365,7 @@ static void *AllocAndReadFromNarcMemberByPathAndIndex(const char *path, int memb
     GF_ASSERT(btafStart != 0);
 
     if (allocAtEnd == 0) {
+#endif
         dest = Heap_Alloc(heapID, btafStart);
     } else {
         dest = Heap_AllocAtEnd(heapID, btafStart);
@@ -361,11 +427,23 @@ u32 NARC_GetMemberSizeByIndexPair(enum NarcID narcID, int memberIndex)
 
     FS_SeekFile(&file, btafStart + 4, FS_SEEK_SET);
     FS_ReadFile(&file, &chunkSize, 4);
+#ifdef PLATFORM_PC
+    // PC port: a member missing from the localized ROM archive has size 0 (see above).
+    FS_ReadFile(&file, &fileCount, 2);
+
+    if (fileCount <= memberIndex) {
+        FS_CloseFile(&file);
+        return 0;
+    }
+
+    btnfStart = btafStart + chunkSize;
+#else
     FS_ReadFile(&file, &fileCount, 2);
 
     GF_ASSERT(fileCount > memberIndex);
 
     btnfStart = btafStart + chunkSize;
+#endif
 
     FS_SeekFile(&file, btnfStart + 4, FS_SEEK_SET);
     FS_ReadFile(&file, &chunkSize, 4);
@@ -426,6 +504,22 @@ void *NARC_AllocAndReadWholeMember(NARC *narc, u32 memberIndex, enum HeapID heap
     u32 fileEnd;
     void *dest;
 
+#ifdef PLATFORM_PC
+    // PC port: a localized ROM can have fewer members in an archive than the US one
+// the code was decompiled from (French op_demo.narc: 113 vs 116). Skip
+// the read like the localized game does instead of reading past the table.
+    if (narc->numFiles <= memberIndex) {
+        pc_warn("narc: archive has %u members, member %u does not exist in this ROM", narc->numFiles, memberIndex);
+        return NULL;
+    }
+
+    FS_SeekFile(&narc->file, narc->fatbStart + 12 + memberIndex * 8, FS_SEEK_SET);
+    FS_ReadFile(&narc->file, &fileStart, 4);
+    FS_ReadFile(&narc->file, &fileEnd, 4);
+    FS_SeekFile(&narc->file, narc->fimgStart + 8 + fileStart, FS_SEEK_SET);
+
+    dest = Heap_Alloc(heapID, fileEnd - fileStart);
+#else
     GF_ASSERT(narc->numFiles > memberIndex);
 
     FS_SeekFile(&narc->file, narc->fatbStart + 12 + memberIndex * 8, FS_SEEK_SET);
@@ -434,6 +528,7 @@ void *NARC_AllocAndReadWholeMember(NARC *narc, u32 memberIndex, enum HeapID heap
     FS_SeekFile(&narc->file, narc->fimgStart + 8 + fileStart, FS_SEEK_SET);
 
     dest = Heap_Alloc(heapID, fileEnd - fileStart);
+#endif
 
     if (dest) {
         FS_ReadFile(&narc->file, dest, fileEnd - fileStart);
@@ -461,6 +556,18 @@ u32 NARC_GetMemberSize(NARC *narc, u32 memberIndex)
     u32 fileStart;
     u32 fileEnd;
 
+#ifdef PLATFORM_PC
+    // PC port: a member missing from the localized ROM archive has size 0 (see above).
+    if (narc->numFiles <= memberIndex) {
+        return 0;
+    }
+
+    FS_SeekFile(&narc->file, narc->fatbStart + 12 + memberIndex * 8, FS_SEEK_SET);
+    FS_ReadFile(&narc->file, &fileStart, 4);
+    FS_ReadFile(&narc->file, &fileEnd, 4);
+
+    return fileEnd - fileStart;
+#else
     GF_ASSERT(narc->numFiles > memberIndex);
 
     FS_SeekFile(&narc->file, narc->fatbStart + 12 + memberIndex * 8, FS_SEEK_SET);
@@ -468,6 +575,7 @@ u32 NARC_GetMemberSize(NARC *narc, u32 memberIndex)
     FS_ReadFile(&narc->file, &fileEnd, 4);
 
     return fileEnd - fileStart;
+#endif
 }
 
 void NARC_ReadFromMember(NARC *narc, u32 memberIndex, u32 offset, u32 bytesToRead, void *dest)

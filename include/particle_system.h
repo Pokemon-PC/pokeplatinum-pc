@@ -29,7 +29,13 @@ typedef struct ParticleSystem {
     SPLManager *manager;
     void *resource;
     SPLEmitter *lastAddedEmitter;
+#ifdef PLATFORM_PC
+    // PC port: see ParticleSystem_New (src/particle_system.c).
     void *heapStart;
+    void *pcWork;
+#else
+    void *heapStart;
+#endif
     void *heap;
     void *heapEnd;
     SPLTexVRAMAllocFunc texAllocFunc;
