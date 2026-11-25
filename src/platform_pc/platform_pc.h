@@ -121,6 +121,8 @@ const char *pc_install_base_dir(void);
 const char *pc_install_prepare(const char *requested_lang);
 /* Relative save names are resolved next to the executable. */
 void        pc_install_save_path(const char *name, char *out, size_t n);
+/* Explicit ROM (--rom / PPL_ROM): a .nds file, or a folder to search. */
+void        pc_install_set_rom(const char *path);
 
 /* ---------------------------------------------------------- input_pc.c */
 /* Bit layout identical to NitroSDK PAD_BUTTON_* / PAD_KEY_* */
@@ -170,6 +172,7 @@ typedef struct PcConfig {
     int     filter;                                    /* PC_FILTER_* */
     int     windowScale;
     char    language[8];                               /* [options] auto, fr, en... */
+    char    romDir[1024];                              /* [options] rom_dir: folder searched for the ROM */
 } PcConfig;
 void            pc_config_load(void);
 const PcConfig *pc_config(void);

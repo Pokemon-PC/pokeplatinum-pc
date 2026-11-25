@@ -13,6 +13,10 @@ pilote, et adapter cette page quand le code du launcher arrive.
 | Langue | argument `--lang fr\|en` | priorité la plus haute |
 | | variable d'environnement `PPL_LANG=fr\|en` | |
 | | `config.ini` → `[options] language = auto\|fr\|en` | `auto` = langue de la ROM du joueur |
+| ROM | `--rom FICHIER\|DOSSIER` | priorité la plus haute (variable `PPL_ROM`) |
+| | dossier de l'exe | |
+| | `config.ini` → `[options] rom_dir = DOSSIER` | vide par défaut ; à remplir par le launcher |
+| | | ROM choisie par son en-tête (code `CPU*`), jamais par son nom ; extraite une seule fois dans `pc_data/<langue>` |
 | Sauvegarde | `--save FICHIER` | défaut : `save.bin` à côté de l'exe |
 | Taille de fenêtre | `--scale N` | sinon `[display] window_scale` |
 | Données | `--data DOSSIER` (développement) | sinon détection automatique (ci-dessous) |
@@ -25,7 +29,7 @@ déjà expliqué au joueur quoi faire).
 ```
 pokeplatinum.exe
 config.ini                 créé au premier lancement
-<ROM>.nds                  ROM du joueur (code de jeu CPU*)
+<ROM>.nds                  ROM du joueur (code de jeu CPU*), ou dans rom_dir
 pc_data/<langue>/          ROM extraite au 1er lancement (langue de la ROM)
 pc_data/en/                couche anglaise construite depuis le dépôt
 mods/, mods/<langue>/

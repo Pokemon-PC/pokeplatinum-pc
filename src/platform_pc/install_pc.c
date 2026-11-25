@@ -69,9 +69,9 @@ static void rom_game_code(const char *path, char code[5]) {
     }
 }
 
-/* A *.nds file in dir (out: full path): this version's ROM (game code
- * PC_GAME_CODE3*) if there is one, else the first one found (so that a wrong
- * ROM gets a clear message). */
+/* A *.nds file in dir (out: full path) whose header has this version's game
+ * code (PC_GAME_CODE3*). File names are never trusted: the folder may hold
+ * the ROMs of other games. */
 static bool find_rom(const char *dir, char *out, size_t n) {
     bool found = false;
     char path[1100], code[5];
@@ -103,10 +103,6 @@ static bool find_rom(const char *dir, char *out, size_t n) {
             snprintf(out, n, "%s", path);
             found = true;
             break;
-        }
-        if (!found) {
-            snprintf(out, n, "%s", path);
-            found = true;   /* keep looking for the right version */
         }
 #if defined(_WIN32)
     } while (FindNextFileA(h, &fd));
@@ -293,6 +289,38 @@ static const char *extract_rom(const char *base, const char *rom_path) {
 
 /* pc_data/<lang> holds a whole extracted ROM (not just a language layer
  * built from the repository, like pc_data/en). */
+static char s_rom_explicit[1100];
+
+void pc_install_set_rom(const char *path) {
+    snprintf(s_rom_explicit, sizeof s_rom_explicit, "%s", path);
+}
+
+/* The player's ROM, in this order: the explicit path (--rom / PPL_ROM, a
+ * file or a folder), the game's folder, then config.ini [options] rom_dir. */
+static bool locate_rom(const char *base, char *out, size_t n) {
+    char code[5];
+    if (s_rom_explicit[0] != '\0') {
+        if (file_exists(s_rom_explicit)) {
+            rom_game_code(s_rom_explicit, code);
+            if (memcmp(code, PC_GAME_CODE3, 3) == 0) {
+                snprintf(out, n, "%s", s_rom_explicit);
+                return true;
+            }
+            pc_warn("install: %s is not a " PC_GAME_TITLE_EN " ROM (game code '%s')", s_rom_explicit, code);
+        } else if (find_rom(s_rom_explicit, out, n)) {
+            return true;
+        }
+    }
+    if (find_rom(base, out, n)) {
+        return true;
+    }
+    const PcConfig *cfg = pc_config();
+    if (cfg->romDir[0] != '\0' && find_rom(cfg->romDir, out, n)) {
+        return true;
+    }
+    return false;
+}
+
 static bool has_rom_data(const char *base, const char *lang) {
     char probe[1200];
     snprintf(probe, sizeof probe, "%s" SEP PC_DATA_DIR SEP "%s" SEP "poketool" SEP "personal" SEP "pl_personal.narc", base, lang);
@@ -316,7 +344,7 @@ const char *pc_install_prepare(const char *requested_lang) {
         if (dir_exists(probe) && any_rom_data(base)) {
             return requested_lang;           /* the ROM data fills in the rest */
         }
-        if (dir_exists(probe) && find_rom(base, rom, sizeof rom) && extract_rom(base, rom) != NULL) {
+        if (dir_exists(probe) && locate_rom(base, rom, sizeof rom) && extract_rom(base, rom) != NULL) {
             return requested_lang;
         }
     } else {
@@ -327,7 +355,7 @@ const char *pc_install_prepare(const char *requested_lang) {
             }
         }
     }
-    if (find_rom(base, rom, sizeof rom)) {
+    if (locate_rom(base, rom, sizeof rom)) {
         const char *lang = extract_rom(base, rom);
         if (lang != NULL && (requested_lang == NULL || strcmp(lang, requested_lang) == 0)) {
             return lang;
@@ -347,9 +375,11 @@ const char *pc_install_prepare(const char *requested_lang) {
     snprintf(msg, sizeof msg,
              "Donn\xc3\xa9\x65s du jeu introuvables.\n"
              "Copiez la ROM de VOTRE cartouche " PC_GAME_TITLE_FR " (fichier .nds)\n"
-             "dans ce dossier, puis relancez le jeu :\n%s\n\n"
+             "dans ce dossier (ou indiquez son dossier dans config.ini, rom_dir),\n"
+             "puis relancez le jeu :\n%s\n\n"
              "Game data not found. Copy the ROM dumped from YOUR OWN\n"
-             "" PC_GAME_TITLE_EN " cartridge (.nds file) into this folder and restart.",
+             "" PC_GAME_TITLE_EN " cartridge (.nds file) into this folder (or set\n"
+             "its folder in config.ini, rom_dir) and restart.",
              base);
     message(PC_GAME_TITLE, msg);
     return NULL;

@@ -19,6 +19,13 @@ devez fournir la ROM de VOTRE PROPRE cartouche.
    extraits dans `pc_data/<langue>` (quelques secondes). La langue suit votre
    ROM (française, anglaise…). Vous pouvez ensuite retirer la ROM.
 
+La ROM peut aussi rester dans un autre dossier : indiquez-le dans
+`config.ini`, section `[options]`, clé `rom_dir` (par ex.
+`rom_dir = D:\Jeux\roms`). Le jeu cherche dans cet ordre : le chemin donné
+par `--rom` (fichier ou dossier), le dossier du jeu, puis `rom_dir`. La bonne
+ROM est reconnue par son en-tête (code de jeu CPU…), pas par son nom : le
+dossier peut contenir les ROM d'autres jeux.
+
 Votre partie est enregistrée dans `save.bin` (même format que la mémoire de
 sauvegarde de la cartouche, 512 Kio).
 
@@ -52,7 +59,7 @@ l'avance rapide, plein écran, disposition `large_top` / `stacked` /
 
 ### Options de lancement
 
-`pokeplatinum.exe [--lang fr|en] [--save FICHIER] [--scale N] [--data DOSSIER]`
+`pokeplatinum.exe [--lang fr|en] [--rom FICHIER|DOSSIER] [--save FICHIER] [--scale N] [--data DOSSIER]`
 
 ### Limites
 
@@ -81,6 +88,12 @@ dumped from YOUR OWN cartridge.
 3. Run `pokeplatinum.exe`. On first run the game files are extracted to
    `pc_data/<language>` (a few seconds); the language follows your ROM. You
    can remove the ROM afterwards.
+
+The ROM can also stay in another folder: set it in `config.ini`, `[options]`,
+key `rom_dir` (e.g. `rom_dir = D:\Games\roms`). Search order: the path given
+with `--rom` (file or folder), the game's folder, then `rom_dir`. The right ROM
+is recognized by its header (game code CPU…), not by its name, so the folder
+may hold other games' ROMs.
 
 Your game is saved in `save.bin` (same format as the cartridge's 512 KiB
 backup memory).

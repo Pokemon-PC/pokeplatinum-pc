@@ -186,3 +186,13 @@ Platine utilise les en-têtes réels du SDK (ntrtwl), écrits pour Metrowerks.
   équivalent Platine (non branchés) : `PPL_TEST_GIVE_ITEMS`, `PPL_TEST_BADGES`,
   `PPL_TEST_MOVES`, `PPL_TEST_EGG_READY`, vidage de carte.
   Reste : écoute du son, manette physique, partie longue.
+- **2026-11-25 (suite 5)** — ROM dans un dossier commun : clé `rom_dir` de
+  `config.ini` (`[options]`, vide par défaut, commentée), option `--rom
+  FICHIER|DOSSIER` et variable `PPL_ROM`. Ordre : chemin explicite, dossier
+  de l'exe, `rom_dir`. Sélection par l'en-tête (code `CPU*`) seulement — le
+  repli « première .nds trouvée » est supprimé, le dossier commun contenant
+  aussi HeartGold, SoulSilver, Noire 2… ; une ROM explicite d'un autre jeu est
+  refusée avec un message (`IPKF` testé). Machine de développement :
+  `rom_dir = D:\LUC\pokemonall\roms` (build-pc/config.ini) et
+  `/mnt/d/LUC/pokemonall/roms` (WSL, `~/ppl-linux/config.ini`). Vérifié :
+  paquet vierge Windows et exe Linux extraient la ROM FR depuis ce dossier.

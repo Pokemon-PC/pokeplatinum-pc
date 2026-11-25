@@ -95,6 +95,10 @@ static const char *const s_default_ini =
     "; language: auto (the language of your ROM), fr, en. English comes from\n"
     "; the game's source (pc_data/en), the rest from your ROM.\n"
     "language = auto\n"
+    "; folder holding your ROM (.nds), searched after the game's own folder;\n"
+    "; the ROM is recognized by its header (game code CPU...), not by its name.\n"
+    "; Empty: only the game's folder. Example: rom_dir = D:\\Games\\roms\n"
+    "rom_dir =\n"
     "\n"
     "[display]\n"
     "; start in fullscreen (1 = yes); F11 switches at any time\n"
@@ -211,6 +215,8 @@ static void parse(const char *text) {
                 s_cfg.analogDpad = atoi(value) != 0;
             } else if (SDL_strcasecmp(key, "language") == 0) {
                 SDL_strlcpy(s_cfg.language, value, sizeof s_cfg.language);
+            } else if (SDL_strcasecmp(key, "rom_dir") == 0) {
+                SDL_strlcpy(s_cfg.romDir, value, sizeof s_cfg.romDir);
             } else {
                 pc_warn("config: unknown option '%s'", key);
             }

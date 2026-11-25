@@ -10,7 +10,7 @@
  * Note: this file is compiled with the game's include paths and must not
  * include SDL (see PORTING_ROADMAP.md, M2).
  *
- * Usage: pokeplatinum [--lang fr|en] [--data DIR] [--save FILE] [--scale N]
+ * Usage: pokeplatinum [--lang fr|en] [--data DIR] [--save FILE] [--scale N] [--rom FILE|DIR]
  * First run: the player's ROM (*.nds) in the game folder is extracted to
  * pc_data/<lang> (install_pc.c); the language follows the ROM.
  * Test hooks (environment): PPL_EXIT_AFTER, PPL_TEST_RESET_AT (nitro_pc.c).
@@ -43,13 +43,15 @@ int main(int argc, char **argv) {
     const char *data = getenv("PPL_DATA_DIR");
     const char *save = NULL;   /* NULL: save.bin next to the game data */
     int scale = 0;   /* 0: window_scale from config.ini */
+    const char *rom = getenv("PPL_ROM");   /* NULL: exe folder, then config rom_dir */
     for (int i = 1; i + 1 < argc; i += 2) {
         if (!strcmp(argv[i], "--lang")) lang = argv[i + 1];
         else if (!strcmp(argv[i], "--data")) data = argv[i + 1];
         else if (!strcmp(argv[i], "--save")) save = argv[i + 1];
         else if (!strcmp(argv[i], "--scale")) scale = atoi(argv[i + 1]);
+        else if (!strcmp(argv[i], "--rom")) rom = argv[i + 1];
         else {
-            fprintf(stderr, "usage: pokeplatinum [--lang fr|en] [--data DIR] [--save FILE] [--scale N]\n");
+            fprintf(stderr, "usage: pokeplatinum [--lang fr|en] [--data DIR] [--save FILE] [--scale N] [--rom FILE|DIR]\n");
             return 2;
         }
     }
@@ -75,6 +77,9 @@ int main(int argc, char **argv) {
     pc_nitro_set_window(TRUE);
     if (lang == NULL && cfg->language[0] != '\0' && !is_auto(cfg->language)) {
         lang = cfg->language;              /* config.ini [options] language */
+    }
+    if (rom != NULL && rom[0] != '\0') {
+        pc_install_set_rom(rom);
     }
     if (data == NULL) {
         lang = pc_install_prepare(lang);   /* extracts the player's ROM on first run */
