@@ -99,8 +99,20 @@ static BOOL FieldTask_DoClearGameSequence(FieldTask *task)
         break;
     case 1:
         if (!FieldSystem_IsRunningApplication(fieldSystem)) {
+#ifdef PLATFORM_PC
+            // PC port: fieldSystem->bgConfig was freed with the field map (fieldmap.c)
+// before the Hall of Fame; the DS reuses the stale block, whose old
+// contents survive there by luck. Here the Hall of Fame screen reuses
+// that memory (seen with the English text: heap ID garbage, crash).
+// A fresh BgConfig in the recreated FIELD1 heap, freed with it at the
+// end of the sequence.
+            Heap_Create(HEAP_ID_APPLICATION, HEAP_ID_FIELD1, HEAP_SIZE_FIELD1);
+            fieldSystem->bgConfig = BgConfig_New(HEAP_ID_FIELD1);
+            sub_02052F28(fieldSystem, clearGameStruct);
+#else
             Heap_Create(HEAP_ID_APPLICATION, HEAP_ID_FIELD1, HEAP_SIZE_FIELD1);
             sub_02052F28(fieldSystem, clearGameStruct);
+#endif
             StartScreenFade(FADE_MAIN_ONLY, FADE_TYPE_BRIGHTNESS_IN, FADE_TYPE_BRIGHTNESS_IN, COLOR_BLACK, 8, 1, HEAP_ID_FIELD3);
             (*state)++;
         }

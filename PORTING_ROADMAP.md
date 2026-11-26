@@ -256,20 +256,34 @@ Platine utilise les en-têtes réels du SDK (ntrtwl), écrits pour Metrowerks.
   **Anglais** : les 8 arènes, Aaron et Terry réussis (textes anglais
   partout : dialogues, combats, badges, CT ; « PV » des jauges reste une
   image de la ROM).
+- **2026-11-26 (suite 2)** — **Histoire complète aussi en anglais** (8
+  arènes, Conseil 4, Cynthia, Panthéon, générique, retour au départ).
+  **Bug corrigé** (vu en anglais seulement) : après le Panthéon, l'écran
+  « Sauvegarde… » de fin de partie (`clear_game.c`) réutilisait
+  `fieldSystem->bgConfig`, libéré avec la carte du terrain avant le
+  Panthéon ; sur DS l'ancien contenu survit par chance (et ici en français),
+  en anglais l'écran du Panthéon réutilisait cette mémoire (identifiant de
+  tas aberrant → plantage). Sous `PLATFORM_PC`, un `BgConfig` neuf est créé
+  dans le tas recréé à ce moment-là.
+  **Linux** (WSL2) : autotest vert, arène 1 et Cynthia + Panthéon +
+  générique réussis, **tournée des lieux 47/47**. Un premier essai de
+  l'arène 1 sous Linux est resté sur l'écran titre (touches à images fixes
+  manquées sous forte charge) ; rejoué, il passe.
 
 ### Où j'en suis (point d'arrêt, 2026-11-26)
 
-- En cours au moment du commit : fin du parcours anglais (Adrien, Lucio,
-  Cynthia, Panthéon : `story_run.py --lang en --from e4_flint`) et
-  recompilation Linux incrémentale dans WSL (`~/ppl-linux`).
-- À faire ensuite :
-  1. relancer les 3 lieux restants (`story_run.py --places` depuis une
-     sauvegarde d'après-partie) ;
-  2. Linux : autotest + parcours de l'histoire (au moins arène 1 et Cynthia)
-     + tournée des lieux sous WSL ;
-  3. mesure de performance (images/s en jeu normal) quand
-     `D:/LUC/pokemonall/.locks/main` est vide — les mesures faites jusqu'ici
-     sont faussées par la charge des autres sessions ;
-  4. tests de systèmes par les menus (Pokédex, Sac, PC, Pokémontre,
+- Fait : son (analyse du signal), histoire complète FR et EN, tournée des
+  lieux (Linux 47/47 ; Windows 46/47 : la dernière téléportation du lot
+  partait juste avant la fin programmée — marge ajoutée au lanceur ; la
+  Zone de Combat est atteinte sous Windows dans l'exécution précédente),
+  Linux, documentation. Non-régression : Cynthia + Panthéon en français
+  rejoués après le correctif `bgConfig`.
+- À faire :
+  1. mesure de performance (images/s en jeu normal) quand
+     `D:/LUC/pokemonall/.locks/main` est vide — toutes les mesures faites
+     jusqu'ici sont faussées par la charge des autres sessions ;
+  2. tests de systèmes par les menus (Pokédex, Sac, PC, Pokémontre,
      boutique, Surf/Vol/Vélo, Souterrain, Concours, Tour de Combat) ;
-  5. reste humain : écoute du son, vraie manette.
+  3. séquence d'écran titre plus robuste pour les tests (attendre le menu
+     au lieu d'images fixes) ;
+  4. reste humain : écoute du son, vraie manette.

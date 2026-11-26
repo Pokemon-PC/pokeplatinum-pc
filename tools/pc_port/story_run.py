@@ -125,7 +125,7 @@ def run_places(a, ids, out, save):
             at = WARP_AT + i * every
             warps.append(f"{ids['MAP_HEADER_' + p]}:{x}:{z}:{at}")
             dumps.append(at + every - 50)
-        frames = WARP_AT + len(batch) * every + 100
+        frames = WARP_AT + len(batch) * every + 1500   # margin: late warps (scenes on arrival)
         env = {"PPL_TEST_KEYS": TITLE_KEYS, "PPL_TEST_WARP": ",".join(warps), "PPL_TEST_MASH": f"20:{WARP_AT}"}
         if a.lang:
             env["_args"] = ["--lang", a.lang]
