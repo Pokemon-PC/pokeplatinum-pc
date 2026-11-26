@@ -6,7 +6,14 @@
 #include "heap.h"
 #include "sys_task.h"
 
+#ifdef PLATFORM_PC
+// PC port: the context structs hold pointers and are larger in 64-bit
+// (up to 248 bytes, e.g. the Veilstone gym punching bags); a context
+// larger than the buffer overwrote the function pointers after it.
+#define OVERWORLD_ANIM_MANAGER_FUNCS_CONTEXT_SIZE 320
+#else
 #define OVERWORLD_ANIM_MANAGER_FUNCS_CONTEXT_SIZE 160
+#endif
 
 typedef struct OverworldAnimManager OverworldAnimManager;
 

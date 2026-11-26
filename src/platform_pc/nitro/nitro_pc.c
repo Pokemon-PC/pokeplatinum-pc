@@ -349,6 +349,10 @@ void pc_nitro_set_window(BOOL has_window) {
  *   PPL_TEST_PARTY_LEVEL=N[+]  party set to level N ("+": 1 exp point
  *                            before N+1, to test level-up/evolution)
  *   PPL_TEST_NO_ENCOUNTERS=1 / PPL_TEST_NO_TRAINERS=1  (field code)
+ *   PPL_TEST_TALK=1          after the last warp, face north and press A
+ *   PPL_TEST_MASH=P[:FROM]   press A for 2 frames every P frames while the
+ *                            player is not free (battles, dialogues, menus
+ *                            opened by scripts), from frame FROM
  *   PPL_TEST_TOUCH=N:X:Y[>X2:Y2][,...]  touch the bottom screen at (X, Y)
  *                            for 6 frames from frame N (">": drag to X2,Y2)
  */
@@ -358,6 +362,8 @@ static u32 s_exit_after;
 static u32 s_test_reset_at[PC_TEST_RESETS];
 static struct { u32 frame; u16 keys; u16 len; } s_test_keys[PC_TEST_KEYS];
 static u32 s_test_pos_every;
+static u32 s_test_mash, s_test_mash_from;   /* PPL_TEST_MASH */
+static u32 s_test_talk_at;                   /* PPL_TEST_TALK */
 static struct { u32 frame; u16 x, y, x2, y2; } s_test_touch[PC_TEST_KEYS];   /* x2/y2: drag end */
 
 static u16 parse_keys(const char *s, const char **end) {
@@ -416,6 +422,12 @@ static void read_test_hooks(void) {
         }
         k = *end == ',' ? end + 1 : NULL;
     }
+    const char *m = getenv("PPL_TEST_MASH");
+    if (m != NULL) {
+        char *n;
+        s_test_mash = (u32)strtoul(m, &n, 10);
+        s_test_mash_from = *n == ':' ? (u32)strtoul(n + 1, NULL, 10) : 0;
+    }
     const char *pe = getenv("PPL_TEST_POS");
     s_test_pos_every = pe != NULL ? (u32)strtoul(pe, NULL, 10) : 0;
     const char *t = getenv("PPL_TEST_TOUCH");
@@ -454,6 +466,17 @@ static void test_hook_touch(u32 frame) {
 
 static u16 test_hook_buttons(u32 frame) {
     u16 keys = 0;
+    if (s_test_talk_at != 0 && frame >= s_test_talk_at && frame < s_test_talk_at + 4) {
+        keys |= PC_PAD_UP;
+    }
+    if (s_test_talk_at != 0 && frame >= s_test_talk_at + 40 && frame < s_test_talk_at + 46) {
+        keys |= PC_PAD_A;
+    }
+    if (s_test_mash != 0 && (s_test_mash_from != 0 || getenv("PPL_TEST_TALK") == NULL) && frame >= s_test_mash_from
+        && frame % s_test_mash < 2
+        && pc_test_field_idle != NULL && !pc_test_field_idle()) {
+        keys |= PC_PAD_A;
+    }
     for (int i = 0; i < PC_TEST_RESETS; i++) {
         if (s_test_reset_at[i] != 0 && frame == s_test_reset_at[i]) {
             keys |= PC_PAD_L | PC_PAD_R | PC_PAD_START | PC_PAD_SELECT;
@@ -548,11 +571,11 @@ void pc_nitro_vblank(void) {
         /* PPL_TEST_WARP=MAP:X:Z[:N][,MAP:X:Z:N...]: warps, each once the field
          * is idle and not before frame N. */
         static int warp_n = -1, warp_next;
-        static unsigned warp_map[8], warp_x[8], warp_z[8], warp_at[8];
+        static unsigned warp_map[64], warp_x[64], warp_z[64], warp_at[64];
         if (warp_n < 0) {
             const char *w = getenv("PPL_TEST_WARP");
             warp_n = 0;
-            while (w != NULL && warp_n < 8) {
+            while (w != NULL && warp_n < 64) {
                 warp_at[warp_n] = 0;
                 if (sscanf(w, "%u:%u:%u:%u", &warp_map[warp_n], &warp_x[warp_n], &warp_z[warp_n], &warp_at[warp_n]) < 3) {
                     break;
@@ -562,10 +585,35 @@ void pc_nitro_vblank(void) {
                 w = w != NULL ? w + 1 : NULL;
             }
         }
-        if (warp_next < warp_n && frames >= warp_at[warp_next] && pc_test_field_idle != NULL && pc_test_field_idle()
-            && pc_test_warp != NULL) {
+        static u32 last_warp;   /* each map gets at least 120 frames */
+        if (warp_next < warp_n && frames >= warp_at[warp_next] && (warp_next == 0 || frames >= last_warp + 120)
+            && pc_test_field_idle != NULL && pc_test_field_idle() && pc_test_warp != NULL) {
             pc_test_warp(warp_map[warp_next], warp_x[warp_next], warp_z[warp_next]);
+            last_warp = frames;
             warp_next++;
+        }
+        /* PPL_TEST_TALK=1: once the last warp is done and the player is free
+         * for 30 frames, face north and press A (talk to whoever is there),
+         * then start PPL_TEST_MASH if it has no start frame. */
+        static int talk = -1;
+        static u32 idle_since;
+        if (talk < 0) {
+            const char *t = getenv("PPL_TEST_TALK");
+            talk = t != NULL && atoi(t) != 0;
+        }
+        if (talk == 1 && warp_next == warp_n && pc_test_field_idle != NULL) {
+            if (!pc_test_field_idle()) {
+                idle_since = 0;
+            } else if (idle_since == 0) {
+                idle_since = frames;
+            } else if (frames - idle_since >= 30) {
+                s_test_talk_at = frames;
+                if (s_test_mash != 0 && s_test_mash_from == 0) {
+                    s_test_mash_from = frames + 100;
+                }
+                pc_log("test: talking (frame %u)", (unsigned)frames);
+                talk = 2;
+            }
         }
     }
     {

@@ -84,6 +84,13 @@ int (*const sApproachingTrainerTask[])(ApproachingTrainerData *);
 
 BOOL FieldSystem_CheckForTrainersWantingBattle(FieldSystem *fieldSystem, BOOL hasTwoAliveMons)
 {
+#ifdef PLATFORM_PC
+    // PC port test aid: PPL_TEST_NO_TRAINERS=1 (src/platform_pc/game_test_hooks_pc.c)
+    extern int pc_test_no_trainers(void);
+    if (pc_test_no_trainers()) {
+        return FALSE;
+    }
+#endif
     ApproachingTrainerTemplate trainer;
     MapObjectManager *mapObjMan = fieldSystem->mapObjMan;
     PlayerAvatar *playerAvatar = fieldSystem->playerAvatar;

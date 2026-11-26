@@ -175,7 +175,15 @@ static BOOL GetTileAttributes(const FieldSystem *fieldSystem, const int tileX, c
 
     u32 fixedTileIndex = (fixedTileZ % MAP_TILES_COUNT_Z) * MAP_TILES_COUNT_X + (fixedTileX % MAP_TILES_COUNT_X);
     u16 const *terrainAttributes = LandDataManager_GetLoadedMapTerrainAttributes(landDataMan, loadedMapIndex);
+#ifdef PLATFORM_PC
+    // PC port: a tile outside the loaded maps gives a negative index held in a u32;
+// on the DS the 32-bit address wraps and reads just before the array,
+// on PC it reads 8 GiB away (crash walking to the Hall of Fame). Signed
+// index: same element as on the DS.
+    *attributes = terrainAttributes[(s32)fixedTileIndex];
+#else
     *attributes = terrainAttributes[fixedTileIndex];
+#endif
 
     return TRUE;
 }
@@ -193,7 +201,12 @@ static BOOL GetSimpleTileAttributes(const FieldSystem *fieldSystem, const int ti
 
     u32 tileIndex = (tileZ % MAP_TILES_COUNT_Z) * MAP_TILES_COUNT_X + (tileX % MAP_TILES_COUNT_X);
     u16 const *terrainAttributes = TerrainAttributes_Get(mapMatrixIndex, fieldSystem->terrainAttributes);
+#ifdef PLATFORM_PC
+    // PC port: same as GetTileAttributes.
+    *attributes = terrainAttributes[(s32)tileIndex];
+#else
     *attributes = terrainAttributes[tileIndex];
+#endif
 
     return TRUE;
 }

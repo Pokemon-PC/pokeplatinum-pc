@@ -230,6 +230,13 @@ static void WildEncounters_ReplaceTrophyGardenEncounters(FieldSystem *fieldSyste
 
 BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem)
 {
+#ifdef PLATFORM_PC
+    // PC port test aid: PPL_TEST_NO_ENCOUNTERS=1 (src/platform_pc/game_test_hooks_pc.c)
+    extern int pc_test_no_encounters(void);
+    if (pc_test_no_encounters()) {
+        return FALSE;
+    }
+#endif
     FieldBattleDTO *battleParams;
     Pokemon *firstPartyMon;
     u8 tileBehavior;

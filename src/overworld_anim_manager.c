@@ -319,8 +319,15 @@ void *OverworldAnimManager_GetFuncsContext(OverworldAnimManager *manager)
 
 void OverworldAnimManager_ResetFuncsContext(OverworldAnimManager *manager, int ctxSize)
 {
+#ifdef PLATFORM_PC
+    // PC port: catch a context too large for funcsCtx (see overworld_anim_manager.h).
+    void *ctx = OverworldAnimManager_GetFuncsContext(manager);
+    GF_ASSERT(ctxSize <= OVERWORLD_ANIM_MANAGER_FUNCS_CONTEXT_SIZE);
+    memset(ctx, 0, ctxSize);
+#else
     void *ctx = OverworldAnimManager_GetFuncsContext(manager);
     memset(ctx, 0, ctxSize);
+#endif
 }
 
 static void OverworldAnimManager_SetUserInt(OverworldAnimManager *manager, int userInt)

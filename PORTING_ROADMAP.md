@@ -196,3 +196,80 @@ Platine utilise les en-têtes réels du SDK (ntrtwl), écrits pour Metrowerks.
   `rom_dir = D:\LUC\pokemonall\roms` (build-pc/config.ini) et
   `/mnt/d/LUC/pokemonall/roms` (WSL, `~/ppl-linux/config.ini`). Vérifié :
   paquet vierge Windows et exe Linux extraient la ROM FR depuis ce dossier.
+- **2026-11-26** — **Vague autonome : son, histoire scriptée, docs.**
+  - **Son vérifié par analyse du signal** (`tools/pc_port/audio_report.py`,
+    Python pur) sur l'intro, le titre, le terrain et un combat avec
+    attaques : aucune saturation (crête −1,2 dBFS), aucune coupure ni
+    craquement, stéréo réelle (corrélation 0,79), **musique juste** (pics
+    spectraux à +5 et −1 cent en moyenne de la gamme tempérée, très
+    groupés : la fréquence de sortie est bonne), spectrogrammes cohérents
+    (mélodies, harmoniques, vibrato, balayage de la transition de combat).
+    Reste l'écoute à l'oreille.
+  - **Parcours scripté de l'histoire** (`tools/pc_port/story_run.py`) : une
+    étape par dresseur majeur, enchaînée de sauvegarde en sauvegarde ; le
+    joueur est téléporté devant le dresseur et lui parle (`PPL_TEST_TALK`),
+    le vrai script tourne (dialogues, combat, badge, CT), A en boucle quand
+    le joueur n'a pas la main (`PPL_TEST_MASH`). **Les 8 champions d'arène
+    battus** (Pierrick, Flo, Kiméra, Mélina, Lovis, Charles, Gladys, Tanguy :
+    badges 1 → 8, primes, CT reçues). Byron et le Conseil 4 en combat direct
+    (`PPL_TEST_TRAINER`) : Byron est sur une plateforme d'ascenseur
+    inaccessible par téléportation, et les salles du Conseil replacent le
+    joueur à l'entrée.
+  - **Bugs 64 bits corrigés** :
+    - arène de Vestigion (et tout décor animé du même type) : plantage par
+      appel à l'adresse 0 — `OverworldAnimManager.funcsCtx` (160 octets sur
+      DS) trop petit pour les contextes à pointeurs (jusqu'à 248 octets) ;
+      tampon de 320 octets sur PC + vérification de taille ;
+      `tools/pc_port/find_ctx_overflows.py` contrôle les 58 types passés à
+      ce tampon et aux zones de travail des objets de la carte : plus aucun
+      débordement ;
+    - après la victoire contre Cynthia, en marchant vers le Panthéon :
+      `GetTileAttributes` lisait à +8 Gio — index de case négatif rangé dans
+      un `u32` (sur DS l'adresse boucle sur 32 bits) ; index signé, même
+      case lue que sur DS.
+  - Crochets de test ajoutés : `PPL_TEST_MASH`, `PPL_TEST_TALK`,
+    `PPL_TEST_GIVE_ITEMS`, `PPL_TEST_BADGES`, `PPL_TEST_MOVES` (+ style
+    « Défini », texte rapide), `PPL_TEST_SPECIES`, `PPL_TEST_FLAGS`
+    (`!` = effacer), `PPL_TEST_VARS`, `PPL_TEST_NO_ENCOUNTERS`,
+    `PPL_TEST_NO_TRAINERS`, journal `progress:` (badges, argent, carte) ; les
+    Pokémon donnés ont le joueur pour dresseur d'origine (sinon un N.100
+    désobéit sans badges) ; `PPL_TEST_SAVE_AT` appelait les fonctions HGSS.
+  - **Tournée de 47 lieux** par téléportation (`story_run.py --places`) :
+    villes, routes, forêts, grottes, lacs, Colonnes Lances, QG Galaxie, Grand
+    Marais, Château Vieillot, Ligue, Route Victoire… affichés sans défaut.
+    La Zone de Combat, atteinte depuis une partie de tout début, lance une
+    scène d'après-Ligue qui attend un état d'histoire absent : à retester
+    depuis une partie d'après Panthéon.
+  - Documentation complète : `docs/pc_port/README.md` (index), `BUILDING.md`,
+    `TESTING.md` (toutes les variables `PPL_*`), `ARCHITECTURE.md`, guide
+    joueur enrichi (`config.ini` détaillé, sauvegardes, problèmes fréquents).
+- **2026-11-26 (suite)** — **Histoire complète en français, de bout en
+  bout** : 8 arènes, Conseil 4 (Aaron, Terry, Adrien, Lucio), **Cynthia
+  battue avec son vrai script**, marche jusqu'au **Panthéon**, **générique**,
+  réinitialisation et retour dans la chambre (sauvegarde d'après-partie).
+  Correctifs de test : soin complet de l'équipe à chaque étape (statut et
+  PP, un Carchacrok paralysé faisait traîner les combats), délai minimal de
+  120 images entre deux téléportations, étapes du Conseil à 24 000 images.
+  **Tournée des lieux depuis l'après-partie : 44/47** (la Zone de Combat
+  s'ouvre normalement ; les 3 restants sont des téléportations enchaînées
+  trop vite, corrigé depuis, à relancer).
+  **Anglais** : les 8 arènes, Aaron et Terry réussis (textes anglais
+  partout : dialogues, combats, badges, CT ; « PV » des jauges reste une
+  image de la ROM).
+
+### Où j'en suis (point d'arrêt, 2026-11-26)
+
+- En cours au moment du commit : fin du parcours anglais (Adrien, Lucio,
+  Cynthia, Panthéon : `story_run.py --lang en --from e4_flint`) et
+  recompilation Linux incrémentale dans WSL (`~/ppl-linux`).
+- À faire ensuite :
+  1. relancer les 3 lieux restants (`story_run.py --places` depuis une
+     sauvegarde d'après-partie) ;
+  2. Linux : autotest + parcours de l'histoire (au moins arène 1 et Cynthia)
+     + tournée des lieux sous WSL ;
+  3. mesure de performance (images/s en jeu normal) quand
+     `D:/LUC/pokemonall/.locks/main` est vide — les mesures faites jusqu'ici
+     sont faussées par la charge des autres sessions ;
+  4. tests de systèmes par les menus (Pokédex, Sac, PC, Pokémontre,
+     boutique, Surf/Vol/Vélo, Souterrain, Concours, Tour de Combat) ;
+  5. reste humain : écoute du son, vraie manette.

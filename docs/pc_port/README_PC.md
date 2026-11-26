@@ -57,9 +57,63 @@ Tout se change dans `config.ini` (touches, manette, raccourcis, vitesse de
 l'avance rapide, plein écran, disposition `large_top` / `stacked` /
 `side_by_side`, étirement, taille de fenêtre, filtre d'image).
 
+### Le fichier `config.ini`
+
+Créé à côté du jeu au premier lancement, commenté. Plusieurs touches peuvent
+être liées à un bouton (séparées par des virgules). Supprimez le fichier pour
+retrouver les réglages par défaut.
+
+| Section | Clé | Valeurs |
+|---|---|---|
+| `[keyboard]` | `A`, `B`, `X`, `Y`, `L`, `R`, `Start`, `Select`, `Up`, `Down`, `Left`, `Right` | noms de touches SDL (`X`, `Return`, `Left Shift`, `F1`…) |
+| `[gamepad]` | mêmes boutons | `a b x y back start leftshoulder rightshoulder dpup dpdown dpleft dpright leftstick rightstick lefttrigger righttrigger` |
+| `[hotkeys]` | `Quit`, `SwapScreens`, `Lid`, `Fullscreen`, `FastForward`, `FastForwardToggle`, `Mute`, `Screenshot`, `Filter` | touches |
+| `[options]` | `fast_forward_speed` | 2 à 10 fois, 0 = sans limite |
+| | `analog_stick_dpad` | 1 = le stick gauche sert de croix |
+| | `language` | `auto` (langue de la ROM), `fr`, `en` |
+| | `rom_dir` | dossier où chercher la ROM (vide = dossier du jeu seulement) |
+| `[display]` | `fullscreen` | 1 = plein écran au démarrage |
+| | `layout` | `large_top` (grand écran du haut, écran tactile à droite, 16:9), `stacked` (comme la DS), `side_by_side` |
+| | `stretch` | 1 = remplit la fenêtre en déformant |
+| | `filter` | `sharp`, `nearest`, `smooth`, `scanlines`, `lcd` |
+| | `window_scale` | taille de la fenêtre en multiples de 256×192 |
+
 ### Options de lancement
 
 `pokeplatinum.exe [--lang fr|en] [--rom FICHIER|DOSSIER] [--save FICHIER] [--scale N] [--data DOSSIER]`
+
+| Option | Effet |
+|---|---|
+| `--lang fr\|en` | langue du jeu (prioritaire sur `config.ini`) |
+| `--rom` | ROM à utiliser, ou dossier où la chercher |
+| `--save FICHIER` | fichier de sauvegarde (une partie par fichier) |
+| `--scale N` | taille de la fenêtre |
+| `--data DOSSIER` | données du jeu déjà extraites (développement) |
+
+### Sauvegardes
+
+La partie est dans `save.bin` (ou le fichier de `--save`), 512 Kio, au format
+de la mémoire de la cartouche : la même sauvegarde fonctionne sous Windows et
+sous Linux. Pour la protéger, copiez simplement ce fichier. Une sauvegarde
+extraite d'une vraie cartouche (fichier `.sav` de 512 Kio) devrait pouvoir être
+renommée en `save.bin` (non vérifié faute de sauvegarde de cartouche).
+
+### Problèmes fréquents
+
+- **« Données du jeu introuvables »** : la ROM n'est ni à côté du jeu ni dans
+  `rom_dir`, ou ce n'est pas une ROM de Pokémon Platine (le jeu la reconnaît à
+  son en-tête, code CPU…). Une ROM de Diamant, Perle ou HeartGold est refusée.
+- **L'antivirus bloque ou supprime `pokeplatinum.exe`** : faux positif
+  fréquent avec les exécutables non signés ; ajoutez une exception pour le
+  dossier du jeu.
+- **Fenêtre noire / message « OpenGL 3.3 required »** : mettez à jour le
+  pilote de la carte graphique.
+- **Pas de son** : vérifiez la touche M (couper le son) et le périphérique de
+  sortie par défaut du système.
+- **Changer de ROM** (autre langue, ROM modifiée) : supprimez `pc_data/` pour
+  qu'elle soit extraite de nouveau.
+- **Journal** : la console (Windows) affiche le journal ; en cas de plantage,
+  il contient une ligne `[ppl:crash]` utile pour un rapport de bug.
 
 ### Limites
 
